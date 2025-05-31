@@ -1,9 +1,10 @@
+
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const { create } = require("@wppconnect-team/wppconnect");
-const { executablePath } = require("puppeteer");
+const { executablePath } = require("puppeteer-core");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("./models/user");
@@ -13,7 +14,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors({
-  origin: ['https://www.ecocrm.com.br', 'https://ecocrm.com.br'],
+  origin: process.env.FRONTEND_URL || '*',
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -39,10 +40,9 @@ app.post("/api/auth/login", async (req, res) => {
     if (!isMatch) return res.status(400).json({ message: "Credenciais inválidas" });
 
     const payload = { user: { id: user.id, name: user.name, email: user.email } };
-
     jwt.sign(payload, process.env.JWT_SECRET || "ecocrm_secret_key", { expiresIn: 3600 }, (err, token) => {
       if (err) throw err;
-      res.json({ token, user: payload.user });
+      res.json({ token, user: { id: user.id, name: user.name, email: user.email } });
     });
   } catch (error) {
     console.error("Erro no login:", error.message);
@@ -62,10 +62,9 @@ app.post("/api/auth/register", async (req, res) => {
     await user.save();
 
     const payload = { user: { id: user.id, name: user.name, email: user.email } };
-
     jwt.sign(payload, process.env.JWT_SECRET || "ecocrm_secret_key", { expiresIn: 3600 }, (err, token) => {
       if (err) throw err;
-      res.status(201).json({ token, user: payload.user });
+      res.status(201).json({ token, user: { id: user.id, name: user.name, email: user.email } });
     });
   } catch (error) {
     console.error("Erro no registro:", error.message);
@@ -128,6 +127,7 @@ app.get("/start-session", async (req, res) => {
     } else {
       res.status(500).json({ error: "QR Code não disponível ainda." });
     }
+
   } catch (err) {
     console.error("Erro geral:", err);
     res.status(500).json({ error: "Erro ao iniciar sessão" });
