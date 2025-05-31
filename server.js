@@ -120,7 +120,7 @@ app.getfunction ("/start-session", async function (req, res) {
       }).then(function (client) {
         session = client;
         console.log("✅ Sessão WhatsApp iniciada.");
-      }).catchfunction ((err) {
+      }).catch(function ((err) {
         console.error("Erro ao iniciar sessão:", err);
         res.status(500).json({ error: "Erro ao iniciar sessão" });
         return;
