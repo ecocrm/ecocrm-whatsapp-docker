@@ -1,10 +1,12 @@
-# Imagem base oficial do Node.js com suporte para Chromium
+# Dockerfile corrigido para Render com Puppeteer e Chromium
+
 FROM node:18-slim
 
-# Variáveis de ambiente para evitar prompts
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=false     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+# Variáveis de ambiente corretas
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=false \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
-# Instalar dependências necessárias para o Chromium funcionar
+# Instalar o Chromium e dependências
 RUN apt-get update && apt-get install -y \
     chromium \
     fonts-liberation \
@@ -24,18 +26,20 @@ RUN apt-get update && apt-get install -y \
     xdg-utils \
     wget \
     --no-install-recommends \
- && apt-get clean && rm -rf /var/lib/apt/lists/*
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Criar diretório da aplicação
 WORKDIR /usr/src/app
 
-# Copiar arquivos da aplicação
+# Copiar e instalar dependências
 COPY package*.json ./
 RUN npm install
+
+# Copiar código-fonte
 COPY . .
 
-# Expor porta do servidor
+# Expor porta
 EXPOSE 3001
 
-# Comando para iniciar o servidor
+# Iniciar servidor
 CMD ["npm", "start"]
