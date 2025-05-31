@@ -1,3 +1,4 @@
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -107,8 +108,7 @@ app.get("/start-session", async (req, res) => {
           "--single-process",
           "--disable-gpu",
         ],
-      }).then((client) => { => {
-        session = client;
+}).then(function (client) {        session = client;
         console.log("✅ Sessão WhatsApp iniciada.");
       }).catch((err) => {
         console.error("Erro ao iniciar sessão:", err);
