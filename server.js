@@ -32,7 +32,7 @@ mongoose
   .catch((err) => console.error("❌ Erro ao conectar no MongoDB:", err));
 
 // Rotas de autenticação
-app.postfunction ("/api/auth/register", async (req, res) {
+app.post ("/api/auth/register", async (req, res) {
   const { name, email, password } = req.body;
   try {
     let user = await User.findOne({ email });
@@ -54,7 +54,7 @@ app.postfunction ("/api/auth/register", async (req, res) {
   }
 });
 
-app.postfunction ("/api/auth/login", async (req, res) {
+app.post ("/api/auth/login", async (req, res) {
   const { email, password } = req.body;
   try {
     const user = await User.findOne({ email });
@@ -74,7 +74,7 @@ app.postfunction ("/api/auth/login", async (req, res) {
   }
 });
 
-app.getfunction ("/api/auth/user", authMiddleware, async (req, res) {
+app.get ("/api/auth/user", authMiddleware, async (req, res) {
   try {
     const user = await User.findById(req.user.id).select("-password");
     if (!user) return res.status(404).json({ message: "Usuário não encontrado" });
@@ -89,7 +89,7 @@ app.getfunction ("/api/auth/user", authMiddleware, async (req, res) {
 let session = null;
 let currentQr = null;
 
-app.getfunction ("/start-session", async (req, res) {
+app.get ("/start-session", async (req, res) {
   try {
     if (!fs.existsSync("/usr/bin/chromium")) {
       return res.status(500).json({ error: "Chromium não encontrado no caminho /usr/bin/chromium-browser" });
