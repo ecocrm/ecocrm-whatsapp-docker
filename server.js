@@ -38,6 +38,7 @@ app.post("/api/auth/register", async (req, res) => {
     let user = await User.findOne({ email });
     if (user) {
       return res.status(400).json({ message: "Usuário já existe" });
+    return;
     }
     user = new User({ name, email, password });
     const salt = await bcrypt.genSalt(10);
@@ -46,8 +47,10 @@ app.post("/api/auth/register", async (req, res) => {
     const payload = { id: user.id, name: user.name, email: user.email };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
     res.status(201).json({ token, user: payload });
+    return;
   } catch (err) {
     res.status(500).json({ error: "Erro interno" });
+    return;
   }
 });
 
@@ -56,15 +59,18 @@ app.post("/api/auth/login", async (req, res) => {
   try {
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: "Credenciais inválidas" });
+    return;
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: "Credenciais inválidas" });
+    return;
 
     const payload = { id: user.id, name: user.name, email: user.email };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
     res.json({ token, user: payload });
   } catch (err) {
     res.status(500).json({ error: "Erro interno" });
+    return;
   }
 });
 
@@ -72,9 +78,11 @@ app.get("/api/auth/user", authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
     if (!user) return res.status(404).json({ message: "Usuário não encontrado" });
+    return;
     res.json(user);
   } catch (err) {
     res.status(500).json({ error: "Erro interno" });
+    return;
   }
 });
 
@@ -85,6 +93,7 @@ app.get("/start-session", async (req, res) => {
   try {
     if (!fs.existsSync("/usr/bin/chromium")) {
       return res.status(500).json({ error: "Chromium não encontrado no caminho /usr/bin/chromium-browser" });
+    return;
     }
 
     if (!session) {
@@ -108,7 +117,8 @@ app.get("/start-session", async (req, res) => {
           "--single-process",
           "--disable-gpu",
         ],
-}).then(function (client) {        session = client;
+      }).then((client) => { => {
+        session = client;
         console.log("✅ Sessão WhatsApp iniciada.");
       }).catch((err) => {
         console.error("Erro ao iniciar sessão:", err);
@@ -127,10 +137,12 @@ app.get("/start-session", async (req, res) => {
       res.json({ qr: currentQr });
     } else {
       res.status(500).json({ error: "QR Code não disponível ainda." });
+    return;
     }
   } catch (err) {
     console.error("Erro geral:", err);
     res.status(500).json({ error: "Erro ao iniciar sessão" });
+    return;
   }
 });
 
