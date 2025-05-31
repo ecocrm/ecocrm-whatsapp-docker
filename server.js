@@ -83,7 +83,7 @@ let currentQr = null;
 
 app.get("/start-session", async (req, res) => {
   try {
-    if (!fs.existsSync("/usr/bin/chromium-browser")) {
+    if (!fs.existsSync("/usr/bin/chromium")) {
       return res.status(500).json({ error: "Chromium não encontrado no caminho /usr/bin/chromium-browser" });
     }
 
@@ -92,7 +92,7 @@ app.get("/start-session", async (req, res) => {
         session: "eco-crm",
         headless: true,
         useChrome: false,
-        browserPath: executablePath(),
+        browserPath: process.env.BROWSER_PATH || executablePath(),
         debug: false,
         catchQR: (base64Qrimg) => {
           currentQr = `data:image/png;base64,${base64Qrimg}`;
