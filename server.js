@@ -108,7 +108,7 @@ app.get("/start-session", async (req, res) => {
           "--single-process",
           "--disable-gpu",
         ],
-      }).then((client) => { => {
+      }).then(function (client) { => {
         session = client;
         console.log("✅ Sessão WhatsApp iniciada.");
       }).catch((err) => {
