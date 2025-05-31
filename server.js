@@ -32,7 +32,7 @@ mongoose
   .catch((err) => console.error("❌ Erro ao conectar no MongoDB:", err));
 
 // Rotas de autenticação
-app.post("/api/auth/register", async (req, res) => {
+app.postfunction ("/api/auth/register", async (req, res) {
   const { name, email, password } = req.body;
   try {
     let user = await User.findOne({ email });
@@ -54,7 +54,7 @@ app.post("/api/auth/register", async (req, res) => {
   }
 });
 
-app.post("/api/auth/login", async (req, res) => {
+app.postfunction ("/api/auth/login", async (req, res) {
   const { email, password } = req.body;
   try {
     const user = await User.findOne({ email });
@@ -74,7 +74,7 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
-app.get("/api/auth/user", authMiddleware, async (req, res) => {
+app.getfunction ("/api/auth/user", authMiddleware, async (req, res) {
   try {
     const user = await User.findById(req.user.id).select("-password");
     if (!user) return res.status(404).json({ message: "Usuário não encontrado" });
@@ -89,7 +89,7 @@ app.get("/api/auth/user", authMiddleware, async (req, res) => {
 let session = null;
 let currentQr = null;
 
-app.get("/start-session", async (req, res) => {
+app.getfunction ("/start-session", async (req, res) {
   try {
     if (!fs.existsSync("/usr/bin/chromium")) {
       return res.status(500).json({ error: "Chromium não encontrado no caminho /usr/bin/chromium-browser" });
@@ -104,7 +104,7 @@ app.get("/start-session", async (req, res) => {
         browserPath: process.env.BROWSER_PATH || executablePath(),
         debug: false,
         userDataDir: "/tmp/wpp-session-" + Date.now(),
-        catchQR: (base64Qrimg) => {
+        catchQR: function (base64Qrimg) {
           currentQr = `data:image/png;base64,${base64Qrimg}`;
         },
         browserArgs: [
@@ -117,10 +117,10 @@ app.get("/start-session", async (req, res) => {
           "--single-process",
           "--disable-gpu",
         ],
-      }).then(function (client) { => {
+      }).then(function (client) {
         session = client;
         console.log("✅ Sessão WhatsApp iniciada.");
-      }).catch((err) => {
+      }).catchfunction ((err) {
         console.error("Erro ao iniciar sessão:", err);
         res.status(500).json({ error: "Erro ao iniciar sessão" });
         return;
