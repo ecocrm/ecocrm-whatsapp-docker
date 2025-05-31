@@ -1,14 +1,13 @@
-# Dockerfile corrigido para Render com Puppeteer e Chromium
+# Dockerfile com libnss3 incluída para Puppeteer no Render
 
 FROM node:18-slim
 
-# Variáveis de ambiente corretas
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=false \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
-# Instalar o Chromium e dependências
 RUN apt-get update && apt-get install -y \
     chromium \
+    libnss3 \
     fonts-liberation \
     libappindicator3-1 \
     libasound2 \
@@ -28,18 +27,13 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Criar diretório da aplicação
 WORKDIR /usr/src/app
 
-# Copiar e instalar dependências
 COPY package*.json ./
 RUN npm install
 
-# Copiar código-fonte
 COPY . .
 
-# Expor porta
 EXPOSE 3001
 
-# Iniciar servidor
 CMD ["npm", "start"]
