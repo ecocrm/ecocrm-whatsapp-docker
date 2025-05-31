@@ -94,6 +94,7 @@ app.get("/start-session", async (req, res) => {
         useChrome: false,
         browserPath: process.env.BROWSER_PATH || executablePath(),
         debug: false,
+        userDataDir: `/tmp/wpp-session-${Date.now()}`,
         catchQR: (base64Qrimg) => {
           currentQr = `data:image/png;base64,${base64Qrimg}`;
         },
@@ -107,7 +108,7 @@ app.get("/start-session", async (req, res) => {
           "--single-process",
           "--disable-gpu",
         ],
-      }).then((client) => {
+      }).then((client) => { => {
         session = client;
         console.log("✅ Sessão WhatsApp iniciada.");
       }).catch((err) => {
