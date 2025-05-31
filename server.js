@@ -16,7 +16,11 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors());
+app.use(cors({
+  origin: ["https://www.ecocrm.com.br", "https://ecocrm.com.br"],
+  methods: "GET,POST",
+  credentials: true
+}));
 app.use(express.json());
 
 mongoose
@@ -24,8 +28,8 @@ mongoose
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
-  .then(() => console.log("MongoDB conectado."))
-  .catch((err) => console.error("Erro ao conectar no MongoDB:", err));
+  .then(() => console.log("✅ MongoDB conectado."))
+  .catch((err) => console.error("❌ Erro ao conectar no MongoDB:", err));
 
 // Rotas de autenticação
 app.post("/api/auth/register", async (req, res) => {
@@ -130,4 +134,4 @@ app.get("/start-session", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
