@@ -32,13 +32,12 @@ mongoose
   .catch((err) => console.error("❌ Erro ao conectar no MongoDB:", err));
 
 // Rotas de autenticação
-app.post ("/api/auth/register", async function (req, res) {
+app.postfunction ("/api/auth/register", async function (req, res) {
   const { name, email, password } = req.body;
   try {
     let user = await User.findOne({ email });
     if (user) {
       return res.status(400).json({ message: "Usuário já existe" });
-    
     }
     user = new User({ name, email, password });
     const salt = await bcrypt.genSalt(10);
@@ -46,54 +45,46 @@ app.post ("/api/auth/register", async function (req, res) {
     await user.save();
     const payload = { id: user.id, name: user.name, email: user.email };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
-    res.status(201).json({ token, user: payload });
-    return;
+    return res.status(201).json({ token, user: payload });
   } catch (err) {
-    res.status(500).json({ error: "Erro interno" });
-    return;
+    return res.status(500).json({ error: "Erro interno" });
   }
 });
 
-app.post ("/api/auth/login", async function (req, res) {
+app.postfunction ("/api/auth/login", async function (req, res) {
   const { email, password } = req.body;
   try {
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: "Credenciais inválidas" });
-    
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: "Credenciais inválidas" });
-    
 
     const payload = { id: user.id, name: user.name, email: user.email };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
     res.json({ token, user: payload });
   } catch (err) {
-    res.status(500).json({ error: "Erro interno" });
-    return;
+    return res.status(500).json({ error: "Erro interno" });
   }
 });
 
-app.get ("/api/auth/user", authMiddleware, async function (req, res) {
+app.getfunction ("/api/auth/user", authMiddleware, async function (req, res) {
   try {
     const user = await User.findById(req.user.id).select("-password");
     if (!user) return res.status(404).json({ message: "Usuário não encontrado" });
-    
     res.json(user);
   } catch (err) {
-    res.status(500).json({ error: "Erro interno" });
-    return;
+    return res.status(500).json({ error: "Erro interno" });
   }
 });
 
 let session = null;
 let currentQr = null;
 
-app.get ("/start-session", async function (req, res) {
+app.getfunction ("/start-session", async function (req, res) {
   try {
     if (!fs.existsSync("/usr/bin/chromium")) {
       return res.status(500).json({ error: "Chromium não encontrado no caminho /usr/bin/chromium-browser" });
-    
     }
 
     if (!session) {
@@ -120,10 +111,9 @@ app.get ("/start-session", async function (req, res) {
       }).then(function (client) {
         session = client;
         console.log("✅ Sessão WhatsApp iniciada.");
-      }).catch(function (err) {
+      }).catch(function ((err) {
         console.error("Erro ao iniciar sessão:", err);
-        res.status(500).json({ error: "Erro ao iniciar sessão" });
-        return;
+        return res.status(500).json({ error: "Erro ao iniciar sessão" });
       });
     }
 
@@ -136,13 +126,11 @@ app.get ("/start-session", async function (req, res) {
     if (currentQr) {
       res.json({ qr: currentQr });
     } else {
-      res.status(500).json({ error: "QR Code não disponível ainda." });
-    return;
+      return res.status(500).json({ error: "QR Code não disponível ainda." });
     }
   } catch (err) {
     console.error("Erro geral:", err);
-    res.status(500).json({ error: "Erro ao iniciar sessão" });
-    return;
+    return res.status(500).json({ error: "Erro ao iniciar sessão" });
   }
 });
 
