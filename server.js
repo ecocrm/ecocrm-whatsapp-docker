@@ -31,14 +31,14 @@ mongoose
   .catch((err) => console.error("❌ Erro ao conectar no MongoDB:", err));
 
 // Rotas de autenticação
-app.postfunction ("/api/auth/register", async function (req, res) {
+app.post("/api/auth/register", async (req, res) => {
   const { name, email, password } = req.body;
   try {
     let user = await User.findOne({ email });
     if (user) {
       return res.status(400).json({ message: "Usuário já existe" });
-    return;
     }
+
     user = new User({ name, email, password });
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(password, salt);
@@ -46,53 +46,51 @@ app.postfunction ("/api/auth/register", async function (req, res) {
     const payload = { id: user.id, name: user.name, email: user.email };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
     res.status(201).json({ token, user: payload });
-    return;
   } catch (err) {
-    res.status(500).json({ error: "Erro interno" });
-    return;
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Erro interno" });
+    }
   }
 });
 
-app.postfunction ("/api/auth/login", async function (req, res) {
+app.post("/api/auth/login", async (req, res) => {
   const { email, password } = req.body;
   try {
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: "Credenciais inválidas" });
-    return;
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: "Credenciais inválidas" });
-    return;
 
     const payload = { id: user.id, name: user.name, email: user.email };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
     res.json({ token, user: payload });
   } catch (err) {
-    res.status(500).json({ error: "Erro interno" });
-    return;
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Erro interno" });
+    }
   }
 });
 
-app.getfunction ("/api/auth/user", authMiddleware, async function (req, res) {
+app.get("/api/auth/user", authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
     if (!user) return res.status(404).json({ message: "Usuário não encontrado" });
-    return;
     res.json(user);
   } catch (err) {
-    res.status(500).json({ error: "Erro interno" });
-    return;
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Erro interno" });
+    }
   }
 });
 
 let session = null;
 let currentQr = null;
 
-app.getfunction ("/start-session", async function (req, res) {
+app.get("/start-session", async (req, res) => {
   try {
     if (!fs.existsSync("/usr/bin/chromium")) {
       return res.status(500).json({ error: "Chromium não encontrado no caminho /usr/bin/chromium-browser" });
-    return;
     }
 
     if (!session) {
@@ -116,16 +114,15 @@ app.getfunction ("/start-session", async function (req, res) {
           "--single-process",
           "--disable-gpu",
         ],
-      }).then(function (client) {
+      }).then((client) => {
         session = client;
         console.log("✅ Sessão WhatsApp iniciada.");
-  .catch((err) => {
-  if (!res.headersSent) {
-    console.error("Erro ao iniciar sessão:", err);
-    res.status(500).json({ error: "Erro ao iniciar sessão" });
-  }
-});
-
+      }).catch((err) => {
+        if (!res.headersSent) {
+          console.error("Erro ao iniciar sessão:", err);
+          res.status(500).json({ error: "Erro ao iniciar sessão" });
+        }
+      });
     }
 
     let tentativas = 0;
@@ -138,12 +135,12 @@ app.getfunction ("/start-session", async function (req, res) {
       res.json({ qr: currentQr });
     } else {
       res.status(500).json({ error: "QR Code não disponível ainda." });
-    return;
     }
   } catch (err) {
-    console.error("Erro geral:", err);
-    res.status(500).json({ error: "Erro ao iniciar sessão" });
-    return;
+    if (!res.headersSent) {
+      console.error("Erro geral:", err);
+      res.status(500).json({ error: "Erro ao iniciar sessão" });
+    }
   }
 });
 
