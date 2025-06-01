@@ -1,3 +1,4 @@
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -38,7 +39,6 @@ app.post("/api/auth/register", async (req, res) => {
     if (user) {
       return res.status(400).json({ message: "Usuário já existe" });
     }
-
     user = new User({ name, email, password });
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(password, salt);
@@ -47,9 +47,7 @@ app.post("/api/auth/register", async (req, res) => {
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
     res.status(201).json({ token, user: payload });
   } catch (err) {
-    if (!res.headersSent) {
-      res.status(500).json({ error: "Erro interno" });
-    }
+    res.status(500).json({ error: "Erro interno" });
   }
 });
 
@@ -66,9 +64,7 @@ app.post("/api/auth/login", async (req, res) => {
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
     res.json({ token, user: payload });
   } catch (err) {
-    if (!res.headersSent) {
-      res.status(500).json({ error: "Erro interno" });
-    }
+    res.status(500).json({ error: "Erro interno" });
   }
 });
 
@@ -78,9 +74,7 @@ app.get("/api/auth/user", authMiddleware, async (req, res) => {
     if (!user) return res.status(404).json({ message: "Usuário não encontrado" });
     res.json(user);
   } catch (err) {
-    if (!res.headersSent) {
-      res.status(500).json({ error: "Erro interno" });
-    }
+    res.status(500).json({ error: "Erro interno" });
   }
 });
 
@@ -101,7 +95,7 @@ app.get("/start-session", async (req, res) => {
         browserPath: process.env.BROWSER_PATH || executablePath(),
         debug: false,
         userDataDir: "/tmp/wpp-session-" + Date.now(),
-        catchQR: function (base64Qrimg) {
+        catchQR: (base64Qrimg) => {
           currentQr = `data:image/png;base64,${base64Qrimg}`;
         },
         browserArgs: [
@@ -118,9 +112,9 @@ app.get("/start-session", async (req, res) => {
         session = client;
         console.log("✅ Sessão WhatsApp iniciada.");
       }).catch((err) => {
+        console.error("Erro ao iniciar sessão:", err);
         if (!res.headersSent) {
-          console.error("Erro ao iniciar sessão:", err);
-          res.status(500).json({ error: "Erro ao iniciar sessão" });
+          return res.status(500).json({ error: "Erro ao iniciar sessão" });
         }
       });
     }
@@ -136,9 +130,10 @@ app.get("/start-session", async (req, res) => {
     } else {
       res.status(500).json({ error: "QR Code não disponível ainda." });
     }
+
   } catch (err) {
+    console.error("Erro geral:", err);
     if (!res.headersSent) {
-      console.error("Erro geral:", err);
       res.status(500).json({ error: "Erro ao iniciar sessão" });
     }
   }
