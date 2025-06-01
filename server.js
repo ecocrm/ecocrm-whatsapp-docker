@@ -38,6 +38,7 @@ app.postfunction ("/api/auth/register", async function (req, res) {
     let user = await User.findOne({ email });
     if (user) {
       return res.status(400).json({ message: "Usuário já existe" });
+    return;
     }
     user = new User({ name, email, password });
     const salt = await bcrypt.genSalt(10);
@@ -45,9 +46,11 @@ app.postfunction ("/api/auth/register", async function (req, res) {
     await user.save();
     const payload = { id: user.id, name: user.name, email: user.email };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
-    return res.status(201).json({ token, user: payload });
+    res.status(201).json({ token, user: payload });
+    return;
   } catch (err) {
-    return res.status(500).json({ error: "Erro interno" });
+    res.status(500).json({ error: "Erro interno" });
+    return;
   }
 });
 
@@ -56,15 +59,18 @@ app.postfunction ("/api/auth/login", async function (req, res) {
   try {
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: "Credenciais inválidas" });
+    return;
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: "Credenciais inválidas" });
+    return;
 
     const payload = { id: user.id, name: user.name, email: user.email };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
     res.json({ token, user: payload });
   } catch (err) {
-    return res.status(500).json({ error: "Erro interno" });
+    res.status(500).json({ error: "Erro interno" });
+    return;
   }
 });
 
@@ -72,9 +78,11 @@ app.getfunction ("/api/auth/user", authMiddleware, async function (req, res) {
   try {
     const user = await User.findById(req.user.id).select("-password");
     if (!user) return res.status(404).json({ message: "Usuário não encontrado" });
+    return;
     res.json(user);
   } catch (err) {
-    return res.status(500).json({ error: "Erro interno" });
+    res.status(500).json({ error: "Erro interno" });
+    return;
   }
 });
 
@@ -85,6 +93,7 @@ app.getfunction ("/start-session", async function (req, res) {
   try {
     if (!fs.existsSync("/usr/bin/chromium")) {
       return res.status(500).json({ error: "Chromium não encontrado no caminho /usr/bin/chromium-browser" });
+    return;
     }
 
     if (!session) {
@@ -113,7 +122,8 @@ app.getfunction ("/start-session", async function (req, res) {
         console.log("✅ Sessão WhatsApp iniciada.");
       }).catch(function ((err) {
         console.error("Erro ao iniciar sessão:", err);
-        return res.status(500).json({ error: "Erro ao iniciar sessão" });
+        res.status(500).json({ error: "Erro ao iniciar sessão" });
+        return;
       });
     }
 
@@ -126,11 +136,13 @@ app.getfunction ("/start-session", async function (req, res) {
     if (currentQr) {
       res.json({ qr: currentQr });
     } else {
-      return res.status(500).json({ error: "QR Code não disponível ainda." });
+      res.status(500).json({ error: "QR Code não disponível ainda." });
+    return;
     }
   } catch (err) {
     console.error("Erro geral:", err);
-    return res.status(500).json({ error: "Erro ao iniciar sessão" });
+    res.status(500).json({ error: "Erro ao iniciar sessão" });
+    return;
   }
 });
 
