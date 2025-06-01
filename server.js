@@ -32,13 +32,13 @@ mongoose
   .catch((err) => console.error("❌ Erro ao conectar no MongoDB:", err));
 
 // Rotas de autenticação
-app.postfunction ("/api/auth/register", async function (req, res) {
+app.post ("/api/auth/register", async function (req, res) {
   const { name, email, password } = req.body;
   try {
     let user = await User.findOne({ email });
     if (user) {
       return res.status(400).json({ message: "Usuário já existe" });
-    return;
+    
     }
     user = new User({ name, email, password });
     const salt = await bcrypt.genSalt(10);
@@ -54,16 +54,16 @@ app.postfunction ("/api/auth/register", async function (req, res) {
   }
 });
 
-app.postfunction ("/api/auth/login", async function (req, res) {
+app.post ("/api/auth/login", async function (req, res) {
   const { email, password } = req.body;
   try {
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: "Credenciais inválidas" });
-    return;
+    
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: "Credenciais inválidas" });
-    return;
+    
 
     const payload = { id: user.id, name: user.name, email: user.email };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
@@ -74,11 +74,11 @@ app.postfunction ("/api/auth/login", async function (req, res) {
   }
 });
 
-app.getfunction ("/api/auth/user", authMiddleware, async function (req, res) {
+app.get ("/api/auth/user", authMiddleware, async function (req, res) {
   try {
     const user = await User.findById(req.user.id).select("-password");
     if (!user) return res.status(404).json({ message: "Usuário não encontrado" });
-    return;
+    
     res.json(user);
   } catch (err) {
     res.status(500).json({ error: "Erro interno" });
@@ -89,11 +89,11 @@ app.getfunction ("/api/auth/user", authMiddleware, async function (req, res) {
 let session = null;
 let currentQr = null;
 
-app.getfunction ("/start-session", async function (req, res) {
+app.get ("/start-session", async function (req, res) {
   try {
     if (!fs.existsSync("/usr/bin/chromium")) {
       return res.status(500).json({ error: "Chromium não encontrado no caminho /usr/bin/chromium-browser" });
-    return;
+    
     }
 
     if (!session) {
@@ -120,7 +120,7 @@ app.getfunction ("/start-session", async function (req, res) {
       }).then(function (client) {
         session = client;
         console.log("✅ Sessão WhatsApp iniciada.");
-      }).catch(function ((err) {
+      }).catch(function (err) {
         console.error("Erro ao iniciar sessão:", err);
         res.status(500).json({ error: "Erro ao iniciar sessão" });
         return;
