@@ -82,8 +82,8 @@ let currentQr = null;
 
 app.get("/start-session", async (req, res) => {
   try {
-    if (!fs.existsSync("/usr/bin/google-chrome-stable")) {
-      return res.status(500).json({ error: "Chromium não encontrado no caminho /usr/bin/google-chrome-stable" });
+    if (!fs.existsSync("/usr/bin/chromium")) {
+      return res.status(500).json({ error: "Chromium não encontrado no caminho /usr/bin/chromium-browser" });
     }
 
     if (!session) {
@@ -91,10 +91,10 @@ app.get("/start-session", async (req, res) => {
         session: "eco-crm",
         headless: true,
         useChrome: false,
-        browserPath: "/usr/bin/google-chrome-stable",
+        browserPath: process.env.BROWSER_PATH || executablePath(),
         debug: false,
         userDataDir: "/tmp/wpp-session-" + Date.now(),
-        catchQR: function (base64Qrimg) {
+        catchQR: (base64Qrimg) => {
           currentQr = `data:image/png;base64,${base64Qrimg}`;
         },
         browserArgs: [
@@ -107,12 +107,10 @@ app.get("/start-session", async (req, res) => {
           "--single-process",
           "--disable-gpu",
         ],
-      })
-      .then((client) => {
+      }).then((client) => {
         session = client;
         console.log("✅ Sessão WhatsApp iniciada.");
-      })
-      .catch((err) => {
+      }).catch((err) => {
         if (!res.headersSent) {
           console.error("Erro ao iniciar sessão:", err);
           res.status(500).json({ error: "Erro ao iniciar sessão" });
@@ -133,9 +131,7 @@ app.get("/start-session", async (req, res) => {
     }
   } catch (err) {
     console.error("Erro geral:", err);
-    if (!res.headersSent) {
-      res.status(500).json({ error: "Erro ao iniciar sessão" });
-    }
+    res.status(500).json({ error: "Erro ao iniciar sessão" });
   }
 });
 
