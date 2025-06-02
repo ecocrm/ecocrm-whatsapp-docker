@@ -1,4 +1,3 @@
-
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -31,7 +30,6 @@ mongoose
   .then(() => console.log("✅ MongoDB conectado."))
   .catch((err) => console.error("❌ Erro ao conectar no MongoDB:", err));
 
-// Rotas de autenticação
 app.post("/api/auth/register", async (req, res) => {
   const { name, email, password } = req.body;
   try {
@@ -42,11 +40,12 @@ app.post("/api/auth/register", async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(password, salt);
     await user.save();
+
     const payload = { id: user.id, name: user.name, email: user.email };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
     return res.status(201).json({ token, user: payload });
   } catch (err) {
-    return res.status(500).json({ error: "Erro interno" });
+    if (!res.headersSent) res.status(500).json({ error: "Erro interno" });
   }
 });
 
@@ -63,7 +62,7 @@ app.post("/api/auth/login", async (req, res) => {
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
     return res.json({ token, user: payload });
   } catch (err) {
-    return res.status(500).json({ error: "Erro interno" });
+    if (!res.headersSent) res.status(500).json({ error: "Erro interno" });
   }
 });
 
@@ -73,7 +72,7 @@ app.get("/api/auth/user", authMiddleware, async (req, res) => {
     if (!user) return res.status(404).json({ message: "Usuário não encontrado" });
     return res.json(user);
   } catch (err) {
-    return res.status(500).json({ error: "Erro interno" });
+    if (!res.headersSent) res.status(500).json({ error: "Erro interno" });
   }
 });
 
@@ -83,7 +82,7 @@ let currentQr = null;
 app.get("/start-session", async (req, res) => {
   try {
     if (!fs.existsSync("/usr/bin/chromium")) {
-      return res.status(500).json({ error: "Chromium não encontrado no caminho /usr/bin/chromium" });
+      return res.status(500).json({ error: "Chromium não encontrado" });
     }
 
     if (!session) {
@@ -94,7 +93,7 @@ app.get("/start-session", async (req, res) => {
         browserPath: process.env.BROWSER_PATH || executablePath(),
         debug: false,
         userDataDir: "/tmp/wpp-session-" + Date.now(),
-        catchQR: function (base64Qrimg) {
+        catchQR: (base64Qrimg) => {
           currentQr = `data:image/png;base64,${base64Qrimg}`;
         },
         browserArgs: [
@@ -112,9 +111,7 @@ app.get("/start-session", async (req, res) => {
         console.log("✅ Sessão WhatsApp iniciada.");
       }).catch((err) => {
         console.error("Erro ao iniciar sessão:", err);
-        if (!res.headersSent) {
-          return res.status(500).json({ error: "Erro ao iniciar sessão" });
-        }
+        if (!res.headersSent) res.status(500).json({ error: "Erro ao iniciar sessão" });
       });
     }
 
@@ -131,9 +128,7 @@ app.get("/start-session", async (req, res) => {
     }
   } catch (err) {
     console.error("Erro geral:", err);
-    if (!res.headersSent) {
-      return res.status(500).json({ error: "Erro ao iniciar sessão" });
-    }
+    if (!res.headersSent) res.status(500).json({ error: "Erro ao iniciar sessão" });
   }
 });
 
