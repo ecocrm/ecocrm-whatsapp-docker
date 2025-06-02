@@ -1,3 +1,4 @@
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -41,10 +42,8 @@ app.post("/api/auth/register", async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(password, salt);
     await user.save();
-
     const payload = { id: user.id, name: user.name, email: user.email };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
-
     res.status(201).json({ token, user: payload });
   } catch (err) {
     res.status(500).json({ error: "Erro interno" });
@@ -62,7 +61,6 @@ app.post("/api/auth/login", async (req, res) => {
 
     const payload = { id: user.id, name: user.name, email: user.email };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
-
     res.json({ token, user: payload });
   } catch (err) {
     res.status(500).json({ error: "Erro interno" });
@@ -73,7 +71,6 @@ app.get("/api/auth/user", authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
     if (!user) return res.status(404).json({ message: "Usuário não encontrado" });
-
     res.json(user);
   } catch (err) {
     res.status(500).json({ error: "Erro interno" });
@@ -85,8 +82,8 @@ let currentQr = null;
 
 app.get("/start-session", async (req, res) => {
   try {
-    if (!fs.existsSync("/usr/bin/chromium")) {
-      return res.status(500).json({ error: "Chromium não encontrado no caminho /usr/bin/chromium-browser" });
+    if (!fs.existsSync("/usr/bin/google-chrome-stable")) {
+      return res.status(500).json({ error: "Chromium não encontrado no caminho /usr/bin/google-chrome-stable" });
     }
 
     if (!session) {
@@ -94,10 +91,10 @@ app.get("/start-session", async (req, res) => {
         session: "eco-crm",
         headless: true,
         useChrome: false,
-        browserPath: process.env.BROWSER_PATH || executablePath(),
+        browserPath: "/usr/bin/google-chrome-stable",
         debug: false,
         userDataDir: "/tmp/wpp-session-" + Date.now(),
-        catchQR: (base64Qrimg) => {
+        catchQR: function (base64Qrimg) {
           currentQr = `data:image/png;base64,${base64Qrimg}`;
         },
         browserArgs: [
@@ -111,18 +108,16 @@ app.get("/start-session", async (req, res) => {
           "--disable-gpu",
         ],
       })
-        .then((client) => {
-          session = client;
-          console.log("✅ Sessão WhatsApp iniciada.");
-        })
-        .catch((err) => {
-          if (!res.headersSent) {
-            console.error("Erro ao iniciar sessão:", err);
-            return res.status(500).json({ error: "Erro ao iniciar sessão" });
-          } else {
-            console.warn("Cabeçalhos já foram enviados. Erro:", err);
-          }
-        });
+      .then((client) => {
+        session = client;
+        console.log("✅ Sessão WhatsApp iniciada.");
+      })
+      .catch((err) => {
+        if (!res.headersSent) {
+          console.error("Erro ao iniciar sessão:", err);
+          res.status(500).json({ error: "Erro ao iniciar sessão" });
+        }
+      });
     }
 
     let tentativas = 0;
