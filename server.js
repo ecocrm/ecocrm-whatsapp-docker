@@ -76,53 +76,51 @@ app.get("/api/auth/user", authMiddleware, async (req, res) => {
   }
 });
 
-let session = null;
-let currentQr = null;
-
 app.get("/start-session", async (req, res) => {
   try {
     if (!fs.existsSync("/usr/bin/chromium")) {
       return res.status(500).json({ error: "Chromium não encontrado" });
     }
 
-    if (!session) {
-      await create({
-        session: "eco-crm",
-        headless: true,
-        useChrome: false,
-        browserPath: process.env.BROWSER_PATH || executablePath(),
-        debug: false,
-        userDataDir: "/tmp/wpp-session-" + Date.now(),
-        catchQR: (base64Qrimg) => {
-          currentQr = `data:image/png;base64,${base64Qrimg}`;
-        },
-        browserArgs: [
-          "--no-sandbox",
-          "--disable-setuid-sandbox",
-          "--disable-dev-shm-usage",
-          "--disable-accelerated-2d-canvas",
-          "--no-first-run",
-          "--no-zygote",
-          "--single-process",
-          "--disable-gpu",
-        ],
-      }).then((client) => {
-        session = client;
-        console.log("✅ Sessão WhatsApp iniciada.");
-      }).catch((err) => {
-        console.error("Erro ao iniciar sessão:", err);
-        if (!res.headersSent) res.status(500).json({ error: "Erro ao iniciar sessão" });
-      });
-    }
+    const userDataDir = `/tmp/wpp-session-${Date.now()}`;
+    console.log("🟡 Iniciando sessão com userDataDir:", userDataDir);
+
+    await create({
+      session: "eco-crm",
+      headless: true,
+      useChrome: false,
+      browserPath: process.env.BROWSER_PATH || executablePath(),
+      debug: false,
+      userDataDir,
+      catchQR: (base64Qrimg) => {
+        global.currentQr = `data:image/png;base64,${base64Qrimg}`;
+      },
+      browserArgs: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-accelerated-2d-canvas",
+        "--no-first-run",
+        "--no-zygote",
+        "--single-process",
+        "--disable-gpu",
+      ],
+    }).then((client) => {
+      global.session = client;
+      console.log("✅ Sessão WhatsApp iniciada.");
+    }).catch((err) => {
+      console.error("Erro ao iniciar sessão:", err);
+      if (!res.headersSent) res.status(500).json({ error: "Erro ao iniciar sessão" });
+    });
 
     let tentativas = 0;
-    while (!currentQr && tentativas < 20) {
+    while (!global.currentQr && tentativas < 20) {
       await new Promise(resolve => setTimeout(resolve, 500));
       tentativas++;
     }
 
-    if (currentQr) {
-      return res.json({ qr: currentQr });
+    if (global.currentQr) {
+      return res.json({ qr: global.currentQr });
     } else {
       return res.status(500).json({ error: "QR Code não disponível ainda." });
     }
