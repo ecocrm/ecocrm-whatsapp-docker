@@ -5,10 +5,9 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
-const { create } = require("@wppconnect-team/wppconnect");
+const { create, ev } = require("@wppconnect-team/wppconnect");
 const { executablePath } = require("puppeteer-core");
 const fs = require("fs");
-const rimraf = require("rimraf");
 
 const authMiddleware = require("./middleware/auth");
 const User = require("./models/user");
@@ -83,45 +82,43 @@ let currentQr = null;
 
 app.get("/start-session", async (req, res) => {
   try {
-    const sessionPath = "/tmp/wpp-session-eco-crm";
-    if (fs.existsSync(sessionPath)) {
-      rimraf.sync(sessionPath);
-      console.log("🧹 Diretório antigo de sessão removido.");
-    }
-
     if (!fs.existsSync("/usr/bin/chromium")) {
       return res.status(500).json({ error: "Chromium não encontrado" });
     }
 
-    if (!session) {
-      await create({
-        session: "eco-crm",
-        headless: true,
-        useChrome: false,
-        browserPath: process.env.BROWSER_PATH || executablePath(),
-        debug: false,
-        userDataDir: sessionPath,
-        catchQR: (base64Qrimg) => {
-          currentQr = `data:image/png;base64,${base64Qrimg}`;
-        },
-        browserArgs: [
-          "--no-sandbox",
-          "--disable-setuid-sandbox",
-          "--disable-dev-shm-usage",
-          "--disable-accelerated-2d-canvas",
-          "--no-first-run",
-          "--no-zygote",
-          "--single-process",
-          "--disable-gpu",
-        ],
-      }).then((client) => {
-        session = client;
-        console.log("✅ Sessão WhatsApp iniciada.");
-      }).catch((err) => {
-        console.error("Erro ao iniciar sessão:", err);
-        if (!res.headersSent) res.status(500).json({ error: "Erro ao iniciar sessão" });
-      });
+    if (session) {
+      await session.close();
+      session = null;
+      currentQr = null;
     }
+
+    await create({
+      session: "eco-crm",
+      headless: true,
+      useChrome: false,
+      browserPath: process.env.BROWSER_PATH || executablePath(),
+      debug: false,
+      userDataDir: "/tmp/wpp-session-" + Date.now(),
+      catchQR: (base64Qrimg) => {
+        currentQr = `data:image/png;base64,${base64Qrimg}`;
+      },
+      browserArgs: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-accelerated-2d-canvas",
+        "--no-first-run",
+        "--no-zygote",
+        "--single-process",
+        "--disable-gpu",
+      ],
+    }).then((client) => {
+      session = client;
+      console.log("✅ Sessão WhatsApp iniciada.");
+    }).catch((err) => {
+      console.error("Erro ao iniciar sessão:", err);
+      if (!res.headersSent) res.status(500).json({ error: "Erro ao iniciar sessão" });
+    });
 
     let tentativas = 0;
     while (!currentQr && tentativas < 20) {
