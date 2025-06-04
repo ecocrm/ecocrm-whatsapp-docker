@@ -1,3 +1,4 @@
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -106,15 +107,6 @@ app.get("/start-session", async (req, res) => {
           "--single-process",
           "--disable-gpu",
         ],
-        puppeteerOptions: {
-          args: ['--no-sandbox'],
-        },
-        restartOnCrash: (client) => {
-          session = client;
-          console.log("♻️ Cliente reiniciado.");
-        },
-        waitForLogin: true,
-        resetSession: true
       }).then((client) => {
         session = client;
         console.log("✅ Sessão WhatsApp iniciada.");
