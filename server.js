@@ -127,9 +127,16 @@ app.get("/start-session", async (req, res) => {
     }
 
     if (currentQr) {
-      return res.json({ qr: currentQr });
+      const html = `
+        <html>
+          <body style="display:flex;align-items:center;justify-content:center;height:100vh;background:#f4f4f4;">
+            <img src="${currentQr}" style="width:300px;height:300px;border:2px solid #333;" />
+          </body>
+        </html>
+      `;
+      return res.send(html);
     } else {
-      return res.status(500).json({ error: "QR Code não disponível ainda." });
+      return res.status(500).send("QR Code não disponível ainda.");
     }
   } catch (err) {
     console.error("Erro geral:", err);
