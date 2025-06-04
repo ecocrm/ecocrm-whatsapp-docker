@@ -1,3 +1,4 @@
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -7,6 +8,7 @@ const bcrypt = require("bcryptjs");
 const { create } = require("@wppconnect-team/wppconnect");
 const { executablePath } = require("puppeteer-core");
 const fs = require("fs");
+const rimraf = require("rimraf");
 
 const authMiddleware = require("./middleware/auth");
 const User = require("./models/user");
@@ -81,6 +83,12 @@ let currentQr = null;
 
 app.get("/start-session", async (req, res) => {
   try {
+    const sessionPath = "/tmp/wpp-session-eco-crm";
+    if (fs.existsSync(sessionPath)) {
+      rimraf.sync(sessionPath);
+      console.log("🧹 Diretório antigo de sessão removido.");
+    }
+
     if (!fs.existsSync("/usr/bin/chromium")) {
       return res.status(500).json({ error: "Chromium não encontrado" });
     }
@@ -92,7 +100,7 @@ app.get("/start-session", async (req, res) => {
         useChrome: false,
         browserPath: process.env.BROWSER_PATH || executablePath(),
         debug: false,
-        userDataDir: "/tmp/wpp-session-" + Date.now(),
+        userDataDir: sessionPath,
         catchQR: (base64Qrimg) => {
           currentQr = `data:image/png;base64,${base64Qrimg}`;
         },
