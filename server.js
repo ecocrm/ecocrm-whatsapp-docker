@@ -83,6 +83,7 @@ let currentQr = null;
 app.get("/start-session", async (req, res) => {
   try {
     if (!fs.existsSync("/usr/bin/chromium")) {
+      console.error("❌ Chromium não encontrado em /usr/bin/chromium");
       return res.status(500).json({ error: "Chromium não encontrado" });
     }
 
@@ -97,7 +98,7 @@ app.get("/start-session", async (req, res) => {
       headless: true,
       useChrome: false,
       browserPath: process.env.BROWSER_PATH || executablePath(),
-      debug: false,
+      debug: true,
       userDataDir: "/tmp/wpp-session-" + Date.now(),
       catchQR: (base64Qrimg) => {
         currentQr = `data:image/png;base64,${base64Qrimg}`;
@@ -116,8 +117,9 @@ app.get("/start-session", async (req, res) => {
       session = client;
       console.log("✅ Sessão WhatsApp iniciada.");
     }).catch((err) => {
-      console.error("Erro ao iniciar sessão:", err);
-      if (!res.headersSent) res.status(500).json({ error: "Erro ao iniciar sessão" });
+      console.error("❌ Erro dentro do .then() do create:");
+      console.error(err);
+      if (!res.headersSent) res.status(500).json({ error: "Erro ao iniciar sessão (create failed)" });
     });
 
     let tentativas = 0;
@@ -139,7 +141,8 @@ app.get("/start-session", async (req, res) => {
       return res.status(500).send("QR Code não disponível ainda.");
     }
   } catch (err) {
-    console.error("Erro geral:", err);
+    console.error("❌ Erro geral no /start-session:");
+    console.error(err);
     if (!res.headersSent) res.status(500).json({ error: "Erro ao iniciar sessão" });
   }
 });
