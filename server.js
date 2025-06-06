@@ -1,4 +1,3 @@
-
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -23,13 +22,12 @@ app.use(cors({
 }));
 app.use(express.json());
 
-mongoose
-  .connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log("✅ MongoDB conectado."))
-  .catch((err) => console.error("❌ Erro ao conectar no MongoDB:", err));
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log("✅ MongoDB conectado."))
+.catch((err) => console.error("❌ Erro ao conectar no MongoDB:", err));
 
 app.post("/api/auth/register", async (req, res) => {
   const { name, email, password } = req.body;
@@ -98,7 +96,7 @@ app.get("/start-session", async (req, res) => {
       headless: true,
       useChrome: false,
       browserPath: process.env.BROWSER_PATH || executablePath(),
-      debug: true,
+      debug: false,
       userDataDir: "/tmp/wpp-session-" + Date.now(),
       catchQR: (base64Qrimg) => {
         currentQr = `data:image/png;base64,${base64Qrimg}`;
@@ -117,9 +115,8 @@ app.get("/start-session", async (req, res) => {
       session = client;
       console.log("✅ Sessão WhatsApp iniciada.");
     }).catch((err) => {
-      console.error("❌ Erro dentro do .then() do create:");
-      console.error(err);
-      if (!res.headersSent) res.status(500).json({ error: "Erro ao iniciar sessão (create failed)" });
+      console.error("Erro ao iniciar sessão:", err);
+      if (!res.headersSent) res.status(500).json({ error: "Erro ao iniciar sessão" });
     });
 
     let tentativas = 0;
@@ -129,20 +126,19 @@ app.get("/start-session", async (req, res) => {
     }
 
     if (currentQr) {
-      const html = `
+      const html = \`
         <html>
           <body style="display:flex;align-items:center;justify-content:center;height:100vh;background:#f4f4f4;">
-            <img src="${currentQr}" style="width:300px;height:300px;border:2px solid #333;" />
+            <img src="\${currentQr}" style="width:300px;height:300px;border:2px solid #333;" />
           </body>
         </html>
-      `;
+      \`;
       return res.send(html);
     } else {
       return res.status(500).send("QR Code não disponível ainda.");
     }
   } catch (err) {
-    console.error("❌ Erro geral no /start-session:");
-    console.error(err);
+    console.error("Erro geral no /start-session:", err);
     if (!res.headersSent) res.status(500).json({ error: "Erro ao iniciar sessão" });
   }
 });
