@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 3001;
 
 // Middlewares
 app.use(cors({
-  origin: '*' // Permite pedidos de qualquer origem, ajuste se necessário por segurança
+  origin: '*' // Permite pedidos de qualquer origem
 }));
 app.use(express.json());
 
@@ -18,7 +18,6 @@ app.get('/', (req, res) => {
 });
 
 // Rota para iniciar a sessão e obter o QR Code
-// Alterado de app.get para app.post para corresponder à prática recomendada
 app.post('/start-session', async (req, res) => {
   console.log('Recebido pedido para iniciar a sessão...');
   
@@ -38,13 +37,11 @@ app.post('/start-session', async (req, res) => {
     // Cria o cliente wppconnect
     const client = await create({
       session: 'ecocrm-session',
-      headless: 'new', // Modo headless recomendado para servidores
+      headless: 'new',
       catchQR: (base64Qr, asciiQR, attempts, urlCode) => {
         console.log('QR Code recebido pelo WPPConnect!');
-        // Adiciona o prefixo necessário para a imagem ser exibida corretamente
         sessionQrCode = `data:image/png;base64,${base64Qr}`;
       },
-      // Argumentos otimizados para ambientes serverless
       browserArgs: chromium.args,
       executablePath: executablePath,
       puppeteerOptions: {
@@ -57,14 +54,13 @@ app.post('/start-session', async (req, res) => {
 
     // Espera até 30 segundos pelo QR Code
     let attempts = 0;
-    while (!sessionQrCode && attempts < 60) { // 60 tentativas * 500ms = 30 segundos
+    while (!sessionQrCode && attempts < 60) {
       await new Promise(resolve => setTimeout(resolve, 500));
       attempts++;
     }
 
     if (sessionQrCode) {
       console.log('QR Code pronto. A enviar para o cliente.');
-      // Envia o QR code em formato JSON, como esperado pelo front-end
       res.status(200).json({ success: true, qr: sessionQrCode });
     } else {
       console.error('Timeout: QR Code não foi gerado a tempo.');
@@ -78,3 +74,4 @@ app.post('/start-session', async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`🚀 Servidor WhatsApp rodando na porta ${PORT}`));
+
