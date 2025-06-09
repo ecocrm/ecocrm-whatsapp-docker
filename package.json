@@ -1,17 +1,17 @@
 {
-  "name": "ecocrm-backend",
+  "name": "ecocrm-whatsapp-backend",
   "version": "1.0.0",
-  "main": "server.js",
+  "description": "Servidor WhatsApp para EcoCRM",
+  "main": "servidor.js",
   "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "start": "node servidor.js"
   },
   "dependencies": {
-    "@wppconnect-team/wppconnect": "^2.36.8",
+    "@sparticuz/chromium": "^123.0.1",
+    "@wppconnect-team/wppconnect": "^1.29.0",
     "cors": "^2.8.5",
-    "dotenv": "^16.0.3",
     "express": "^4.18.2",
-    "mongoose": "^7.0.3",
-    "puppeteer-core": "^22.7.0"
+    "puppeteer-core": "^22.9.0"
   }
 }
