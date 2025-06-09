@@ -1,83 +1,80 @@
-const express = require("express");
-const mongoose = require("mongoose");
-const cors = require("cors");
-const dotenv = require("dotenv");
-const { create } = require("@wppconnect-team/wppconnect");
-const { executablePath } = require("puppeteer-core");
-const fs = require("fs");
+import express from 'express';
+import cors from 'cors';
+import { create } from '@wppconnect-team/wppconnect';
+import chromium from '@sparticuz/chromium';
 
-dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors());
+// Middlewares
+app.use(cors({
+  origin: '*' // Permite pedidos de qualquer origem, ajuste se necessário por segurança
+}));
 app.use(express.json());
 
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-}).then(() => console.log("✅ MongoDB conectado"))
-  .catch(err => console.error("❌ Erro MongoDB:", err));
+// Rota para verificar se o servidor está online
+app.get('/', (req, res) => {
+  res.status(200).json({ message: 'Servidor WhatsApp EcoCRM está a funcionar!' });
+});
 
-let session = null;
-let currentQr = null;
+// Rota para iniciar a sessão e obter o QR Code
+// Alterado de app.get para app.post para corresponder à prática recomendada
+app.post('/start-session', async (req, res) => {
+  console.log('Recebido pedido para iniciar a sessão...');
+  
+  let sessionQrCode = null;
 
-app.get("/start-session", async (req, res) => {
   try {
-    if (!fs.existsSync("/usr/bin/chromium")) {
-      return res.status(500).json({ error: "Chromium não encontrado" });
+    // Garante que o Chromium está disponível no ambiente serverless da Vercel
+    const executablePath = await chromium.executablePath();
+    
+    if (!executablePath) {
+        console.error('Chromium não encontrado!');
+        return res.status(500).json({ success: false, message: 'Não foi possível encontrar o navegador Chromium.' });
     }
 
-    if (session) {
-      await session.close();
-      session = null;
-      currentQr = null;
-    }
+    console.log(`Usando Chromium em: ${executablePath}`);
 
-    await create({
-      session: "eco-crm",
-      headless: true,
-      useChrome: false,
-      browserPath: process.env.BROWSER_PATH || executablePath(),
-      debug: false,
-      userDataDir: "/tmp/wpp-session-" + Date.now(),
-      catchQR: (base64Qrimg) => {
-        currentQr = `data:image/png;base64,${base64Qrimg}`;
+    // Cria o cliente wppconnect
+    const client = await create({
+      session: 'ecocrm-session',
+      headless: 'new', // Modo headless recomendado para servidores
+      catchQR: (base64Qr, asciiQR, attempts, urlCode) => {
+        console.log('QR Code recebido pelo WPPConnect!');
+        // Adiciona o prefixo necessário para a imagem ser exibida corretamente
+        sessionQrCode = `data:image/png;base64,${base64Qr}`;
       },
-      browserArgs: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-accelerated-2d-canvas",
-        "--no-first-run",
-        "--no-zygote",
-        "--single-process",
-        "--disable-gpu",
-      ],
-    }).then(client => {
-      session = client;
-      console.log("✅ Sessão WhatsApp iniciada.");
-    }).catch(err => {
-      console.error("❌ Erro ao iniciar sessão:", err);
-      if (!res.headersSent) res.status(500).json({ error: "Erro ao iniciar sessão" });
+      // Argumentos otimizados para ambientes serverless
+      browserArgs: chromium.args,
+      executablePath: executablePath,
+      puppeteerOptions: {
+        headless: 'new',
+        args: chromium.args,
+      },
     });
 
-    let tentativas = 0;
-    while (!currentQr && tentativas < 20) {
+    console.log('Cliente WPPConnect criado. A aguardar o QR Code...');
+
+    // Espera até 30 segundos pelo QR Code
+    let attempts = 0;
+    while (!sessionQrCode && attempts < 60) { // 60 tentativas * 500ms = 30 segundos
       await new Promise(resolve => setTimeout(resolve, 500));
-      tentativas++;
+      attempts++;
     }
 
-    if (currentQr) {
-      const html = `<html><body style="display:flex;align-items:center;justify-content:center;height:100vh;"><img src="${currentQr}" style="width:300px;height:300px;" /></body></html>`;
-      return res.send(html);
+    if (sessionQrCode) {
+      console.log('QR Code pronto. A enviar para o cliente.');
+      // Envia o QR code em formato JSON, como esperado pelo front-end
+      res.status(200).json({ success: true, qr: sessionQrCode });
     } else {
-      return res.status(500).send("QR Code não disponível ainda.");
+      console.error('Timeout: QR Code não foi gerado a tempo.');
+      res.status(500).json({ success: false, message: 'Timeout ao gerar QR Code.' });
     }
-  } catch (err) {
-    console.error("❌ Erro geral:", err);
-    if (!res.headersSent) res.status(500).json({ error: "Erro ao iniciar sessão" });
+
+  } catch (error) {
+    console.error('Erro geral na rota /start-session:', error);
+    res.status(500).json({ success: false, message: 'Erro interno do servidor ao iniciar a sessão.' });
   }
 });
 
-app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Servidor WhatsApp rodando na porta ${PORT}`));
