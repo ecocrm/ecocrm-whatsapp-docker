@@ -1,10 +1,11 @@
 import express from 'express';
 import cors from 'cors';
 import { create } from '@wppconnect-team/wppconnect';
-import chromium from '@sparticuz/chromium';
+import chromium from '@sparticuz/chromium'; // Certifique-se de que esta importação está correta
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+// Usa a porta do ambiente (do Render) ou 3001 como padrão.
+const PORT = process.env.PORT || 3001; 
 
 // Middlewares
 app.use(cors({
@@ -24,12 +25,12 @@ app.post('/start-session', async (req, res) => {
   let sessionQrCode = null;
 
   try {
-    // Garante que o Chromium está disponível no ambiente serverless da Vercel
+    // Garante que o Chromium otimizado do @sparticuz/chromium está disponível
     const executablePath = await chromium.executablePath();
     
     if (!executablePath) {
-        console.error('Chromium não encontrado!');
-        return res.status(500).json({ success: false, message: 'Não foi possível encontrar o navegador Chromium.' });
+        console.error('Chromium não encontrado no caminho fornecido por @sparticuz/chromium!');
+        return res.status(500).json({ success: false, message: 'Não foi possível encontrar o navegador Chromium otimizado.' });
     }
 
     console.log(`Usando Chromium em: ${executablePath}`);
@@ -37,13 +38,13 @@ app.post('/start-session', async (req, res) => {
     // Cria o cliente wppconnect
     const client = await create({
       session: 'ecocrm-session',
-      headless: 'new',
+      headless: 'new', // Garante que o navegador seja iniciado em modo headless
       catchQR: (base64Qr, asciiQR, attempts, urlCode) => {
         console.log('QR Code recebido pelo WPPConnect!');
         sessionQrCode = `data:image/png;base64,${base64Qr}`;
       },
-      browserArgs: chromium.args,
-      executablePath: executablePath,
+      browserArgs: chromium.args, // Argumentos otimizados para o navegador
+      executablePath: executablePath, // Caminho do Chromium otimizado
       puppeteerOptions: {
         headless: 'new',
         args: chromium.args,
@@ -52,7 +53,7 @@ app.post('/start-session', async (req, res) => {
 
     console.log('Cliente WPPConnect criado. A aguardar o QR Code...');
 
-    // Espera até 30 segundos pelo QR Code
+    // Espera até 30 segundos (60 tentativas * 500ms) pelo QR Code
     let attempts = 0;
     while (!sessionQrCode && attempts < 60) {
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -69,9 +70,9 @@ app.post('/start-session', async (req, res) => {
 
   } catch (error) {
     console.error('Erro geral na rota /start-session:', error);
-    res.status(500).json({ success: false, message: 'Erro interno do servidor ao iniciar a sessão.' });
+    // Adiciona mais detalhes sobre o erro para depuração
+    res.status(500).json({ success: false, message: `Erro interno do servidor ao iniciar a sessão: ${error.message}` });
   }
 });
 
 app.listen(PORT, () => console.log(`🚀 Servidor WhatsApp rodando na porta ${PORT}`));
-
