@@ -42,17 +42,28 @@ app.post('/start-session', async (req, res) => {
         // DEBUG: Loga a resposta completa do UltraMsg para ver a estrutura exata
         console.log('Resposta COMPLETA do UltraMsg (depois de JSON.parse):', JSON.stringify(data, null, 2));
 
-        // MUDANÇA AQUI: Condição mais robusta para verificar o QR Code
-        // Verifica se 'data' é um objeto e se tem uma propriedade 'qrcode' que não é vazia.
-        if (typeof data === 'object' && data !== null && typeof data.qrcode === 'string' && data.qrcode.length > 0) {
-            console.log('QR Code recebido do UltraMsg com sucesso!');
-            res.status(200).json({ success: true, qr: data.qrcode }); 
+        // MUDANÇA AQUI: Condição mais explícita para verificar a propriedade 'qrcode'
+        // Usa Object.prototype.hasOwnProperty.call para checar se a propriedade existe.
+        if (typeof data === 'object' && data !== null && Object.prototype.hasOwnProperty.call(data, 'qrcode')) {
+            const qrCodeString = data.qrcode; // Pega o valor do QR code
+            
+            // Verifica se o valor é uma string e não está vazia.
+            if (typeof qrCodeString === 'string' && qrCodeString.length > 0) {
+                console.log('QR Code recebido do UltraMsg com sucesso!');
+                res.status(200).json({ success: true, qr: qrCodeString }); 
+            } else {
+                console.error('Propriedade qrcode encontrada, mas valor não é string válida/não vazia:', JSON.stringify(data, null, 2));
+                res.status(response.status || 500).json({
+                    success: false,
+                    message: 'QR Code recebido, mas formato inválido. Resposta: ' + JSON.stringify(data)
+                });
+            }
         } else {
-            // Este bloco agora só será acionado se realmente não houver um QR Code válido.
-            console.error('Erro ou QR Code válido não encontrado na resposta do UltraMsg. Resposta: ', JSON.stringify(data, null, 2));
-            res.status(response.status || 500).json({ 
-                success: false, 
-                message: data.error || 'Erro desconhecido ou QR Code inválido/ausente do UltraMsg.' 
+            // Este bloco será acionado se 'data' não for objeto ou não tiver a propriedade 'qrcode'.
+            console.error('Erro ou propriedade qrcode ausente na resposta do UltraMsg. Resposta: ', JSON.stringify(data, null, 2));
+            res.status(response.status || 500).json({
+                success: false,
+                message: data.error || 'Erro desconhecido ou QR Code ausente do UltraMsg.'
             });
         }
 
