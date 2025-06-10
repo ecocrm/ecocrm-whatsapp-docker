@@ -21,7 +21,7 @@ app.post('/start-session', async (req, res) => {
     console.log('Recebido pedido para iniciar a sessão com UltraMsg...');
 
     // Pega as variáveis de ambiente que configuramos no Render
-    const ULTRAMSG_API_URL = process.env.ULTRAMSG_API_URL;
+    const ULTRAMSG_API_URL = process.env.ULTRAMSG_API_URL; // Ex: https://api.ultramsg.com/instance124883/
     const ULTRAMSG_INSTANCE_ID = process.env.ULTRAMSG_INSTANCE_ID;
     const ULTRAMSG_TOKEN = process.env.ULTRAMSG_TOKEN;
 
@@ -34,11 +34,9 @@ app.post('/start-session', async (req, res) => {
         });
     }
 
-    // Constrói a URL para a API do QR Code do UltraMsg
-    // A URL base já inclui o instance ID: https://api.ultramsg.com/instance124883/
-    // O endpoint específico para o QR code é: qrcode
-    // O token é passado como query parameter: ?token=[token]
-    const qrCodeApiUrl = `${ULTRAMSG_API_URL}qrcode?token=${ULTRAMSG_TOKEN}`;
+    // CONSTRÓI A URL CORRETAMENTE AGORA
+    // A API_URL já tem o ID da instância no final, então basta adicionar o '/instance/qrCode?token='
+    const qrCodeApiUrl = `${ULTRAMSG_API_URL}instance/qrCode?token=${ULTRAMSG_TOKEN}`;
     console.log(`Chamando UltraMsg API para QR Code: ${qrCodeApiUrl}`);
 
     try {
@@ -47,11 +45,9 @@ app.post('/start-session', async (req, res) => {
         const data = await response.json();
 
         // Verifica a resposta da API do UltraMsg
-        if (response.ok && data.qrcode) {
+        if (response.ok && data.qrcode) { // UltraMsg retorna o QR code na chave 'qrcode'
             console.log('QR Code recebido do UltraMsg com sucesso!');
-            // O UltraMsg geralmente retorna o QR code como uma URL de imagem ou string base64
-            // A documentação mostra 'qrcode' como a chave da imagem.
-            res.status(200).json({ success: true, qr: data.qrcode });
+            res.status(200).json({ success: true, qr: data.qrcode }); // Retorna a string do QR code
         } else {
             console.error('Erro ao obter QR Code do UltraMsg:', data);
             res.status(response.status).json({ 
