@@ -16,60 +16,54 @@ app.get('/', (req, res) => {
     res.status(200).json({ message: 'Servidor WhatsApp EcoCRM está a funcionar!' });
 });
 
-// Rota para iniciar a sessão e obter o QR Code do UltraMsg
+// Rota para iniciar a sessão e obter o QR Code do Green API
 app.post('/start-session', async (req, res) => {
-    console.log('Recebido pedido para iniciar a sessão com UltraMsg...');
+    console.log('Recebido pedido para iniciar a sessão com Green API...');
 
-    const ULTRAMSG_API_URL = process.env.ULTRAMSG_API_URL;
-    const ULTRAMSG_INSTANCE_ID = process.env.ULTRAMSG_INSTANCE_ID;
-    const ULTRAMSG_TOKEN = process.env.ULTRAMSG_TOKEN;
+    // Pega as variáveis de ambiente que configuramos no Render para o Green API
+    const GREENAPI_API_URL = process.env.GREENAPI_API_URL;
+    const GREENAPI_ID_INSTANCE = process.env.GREENAPI_ID_INSTANCE;
+    const GREENAPI_API_TOKEN = process.env.GREENAPI_API_TOKEN;
 
-    if (!ULTRAMSG_API_URL || !ULTRAMSG_INSTANCE_ID || !ULTRAMSG_TOKEN) {
-        console.error('Erro: Variáveis de ambiente do UltraMsg não configuradas!');
+    // Verifica se as variáveis estão configuradas
+    if (!GREENAPI_API_URL || !GREENAPI_ID_INSTANCE || !GREENAPI_API_TOKEN) {
+        console.error('Erro: Variáveis de ambiente do Green API não configuradas!');
         return res.status(500).json({ 
             success: false, 
-            message: 'Erro de configuração do servidor. Variáveis do UltraMsg ausentes.' 
+            message: 'Erro de configuração do servidor. Variáveis do Green API ausentes.' 
         });
     }
 
-    const qrCodeApiUrl = `${ULTRAMSG_API_URL}instance/qrCode?token=${ULTRAMSG_TOKEN}`;
-    console.log(`Chamando UltraMsg API para QR Code: ${qrCodeApiUrl}`);
+    // Constrói a URL para a API do QR Code do Green API
+    // Endpoint: GET /waInstance{idInstance}/getQrCode?token={apiTokenInstance}
+    const qrCodeApiUrl = `${GREENAPI_API_URL}/waInstance${GREENAPI_ID_INSTANCE}/getQrCode?token=${GREENAPI_API_TOKEN}`;
+    console.log(`Chamando Green API para QR Code: ${qrCodeApiUrl}`);
 
     try {
+        // Faz a requisição GET para a API do Green API
         const response = await fetch(qrCodeApiUrl, { method: 'GET' });
         const data = await response.json(); // Tenta parsear a resposta como JSON
 
-        // DEBUG: Loga a resposta completa do UltraMsg para ver a estrutura exata
-        console.log('Resposta COMPLETA do UltraMsg (depois de JSON.parse):', JSON.stringify(data, null, 2));
+        // DEBUG: Loga a resposta completa do Green API para ver a estrutura exata
+        console.log('Resposta COMPLETA do Green API (depois de JSON.parse):', JSON.stringify(data, null, 2));
 
-        // MUDANÇA AQUI: Condição mais explícita para verificar a propriedade 'qrcode'
-        // Usa Object.prototype.hasOwnProperty.call para checar se a propriedade existe.
-        if (typeof data === 'object' && data !== null && Object.prototype.hasOwnProperty.call(data, 'qrcode')) {
-            const qrCodeString = data.qrcode; // Pega o valor do QR code
-            
-            // Verifica se o valor é uma string e não está vazia.
-            if (typeof qrCodeString === 'string' && qrCodeString.length > 0) {
-                console.log('QR Code recebido do UltraMsg com sucesso!');
-                res.status(200).json({ success: true, qr: qrCodeString }); 
-            } else {
-                console.error('Propriedade qrcode encontrada, mas valor não é string válida/não vazia:', JSON.stringify(data, null, 2));
-                res.status(response.status || 500).json({
-                    success: false,
-                    message: 'QR Code recebido, mas formato inválido. Resposta: ' + JSON.stringify(data)
-                });
-            }
+        // Green API retorna o QR code na chave 'qrCode' quando não autorizado
+        // Verifica se 'data' é um objeto e se tem a propriedade 'qrCode' que não é vazia.
+        if (typeof data === 'object' && data !== null && typeof data.qrCode === 'string' && data.qrCode.length > 0) {
+            console.log('QR Code recebido do Green API com sucesso!');
+            // O Green API já retorna o QR code no formato 'data:image/png;base64,...' diretamente!
+            res.status(200).json({ success: true, qr: data.qrCode }); 
         } else {
-            // Este bloco será acionado se 'data' não for objeto ou não tiver a propriedade 'qrcode'.
-            console.error('Erro ou propriedade qrcode ausente na resposta do UltraMsg. Resposta: ', JSON.stringify(data, null, 2));
-            res.status(response.status || 500).json({
-                success: false,
-                message: data.error || 'Erro desconhecido ou QR Code ausente do UltraMsg.'
+            console.error('Erro ou QR Code válido não encontrado na resposta do Green API. Resposta: ', JSON.stringify(data, null, 2));
+            res.status(response.status || 500).json({ 
+                success: false, 
+                message: data.error || 'Erro desconhecido ou QR Code inválido/ausente do Green API.' 
             });
         }
 
     } catch (error) {
-        console.error('Erro na comunicação com a API do UltraMsg (verifique a URL ou conexão):', error);
-        res.status(500).json({ success: false, message: `Erro interno do servidor ao conectar com UltraMsg: ${error.message}` });
+        console.error('Erro na comunicação com a API do Green API (verifique a URL ou conexão):', error);
+        res.status(500).json({ success: false, message: `Erro interno do servidor ao conectar com Green API: ${error.message}` });
     }
 });
 
