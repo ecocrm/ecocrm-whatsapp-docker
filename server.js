@@ -16,6 +16,12 @@ app.get('/', (req, res) => {
     res.status(200).json({ message: 'Servidor WhatsApp EcoCRM está a funcionar!' });
 });
 
+// Nova rota de teste para verificar logs (ADICIONADA AQUI!)
+app.get('/teste-log', (req, res) => {
+    console.log('--- ROTA DE TESTE DE LOG ACESSADA COM SUCESSO ---');
+    res.status(200).send('Log de teste registrado!');
+});
+
 // Rota para iniciar a sessão e obter o QR Code do UltraMsg
 app.post('/start-session', async (req, res) => {
     console.log('>>> REQUISIÇÃO RECEBIDA PELO BACKEND NO RENDER <<<'); // LINHA ADICIONADA PARA TESTE DE LOG
