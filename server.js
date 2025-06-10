@@ -34,30 +34,31 @@ app.post('/start-session', async (req, res) => {
         });
     }
 
-    // Constrói a URL para a API do QR Code do Green API
-    // Endpoint: GET /waInstance{idInstance}/getQrCode?token={apiTokenInstance}
-    const qrCodeApiUrl = `${GREENAPI_API_URL}/waInstance${GREENAPI_ID_INSTANCE}/getQrCode?token=${GREENAPI_API_TOKEN}`;
-    console.log(`Chamando Green API para QR Code: ${qrCodeApiUrl}`);
+    // CONSTRÓI A URL PARA O ENDPOINT getState (MUDANÇA AQUI!)
+    const qrCodeApiUrl = `${GREENAPI_API_URL}/waInstance${GREENAPI_ID_INSTANCE}/getState?token=${GREENAPI_API_TOKEN}`;
+    console.log(`Chamando Green API para QR Code (via getState): ${qrCodeApiUrl}`);
 
     try {
-        // Faz a requisição GET para a API do Green API
         const response = await fetch(qrCodeApiUrl, { method: 'GET' });
         const data = await response.json(); // Tenta parsear a resposta como JSON
 
         // DEBUG: Loga a resposta completa do Green API para ver a estrutura exata
         console.log('Resposta COMPLETA do Green API (depois de JSON.parse):', JSON.stringify(data, null, 2));
 
-        // Green API retorna o QR code na chave 'qrCode' quando não autorizado
-        // Verifica se 'data' é um objeto e se tem a propriedade 'qrCode' que não é vazia.
-        if (typeof data === 'object' && data !== null && typeof data.qrCode === 'string' && data.qrCode.length > 0) {
-            console.log('QR Code recebido do Green API com sucesso!');
-            // O Green API já retorna o QR code no formato 'data:image/png;base64,...' diretamente!
+        // Green API retorna o QR code na chave 'qrCode' quando o status é 'NOT_AUTHORIZED'
+        // Ou 'state' como "not_authorized" e o 'qrCode' dentro.
+        if (typeof data === 'object' && data !== null && typeof data.state === 'string' && data.state === 'NOT_AUTHORIZED' && typeof data.qrCode === 'string' && data.qrCode.length > 0) {
+            console.log('QR Code recebido do Green API com sucesso (instância NÃO AUTORIZADA)!');
             res.status(200).json({ success: true, qr: data.qrCode }); 
-        } else {
-            console.error('Erro ou QR Code válido não encontrado na resposta do Green API. Resposta: ', JSON.stringify(data, null, 2));
+        } else if (typeof data === 'object' && data !== null && typeof data.state === 'string' && data.state === 'AUTHORIZED') {
+            console.log('Instância Green API já está AUTORIZADA. Nenhum QR code necessário.');
+            res.status(200).json({ success: true, message: 'Instância WhatsApp já conectada.' }); 
+        }
+        else {
+            console.error('Erro ou QR Code válido/status esperado não encontrado na resposta do Green API. Resposta: ', JSON.stringify(data, null, 2));
             res.status(response.status || 500).json({ 
                 success: false, 
-                message: data.error || 'Erro desconhecido ou QR Code inválido/ausente do Green API.' 
+                message: data.error || 'Erro desconhecido ou QR Code inválido/ausente do Green API. Resposta: ' + JSON.stringify(data)
             });
         }
 
