@@ -33,39 +33,60 @@ app.post('/start-session', async (req, res) => {
         });
     }
 
-    // Constrói a URL para a API do QR Code do UltraMsg
-    // Endpoint: GET https://api.ultramsg.com/instance[Instance_id]/qrcode?token=[token]
+    // CONSTRÓI A URL PARA O ENDPOINT STATUS (MUDANÇA AQUI!)
+    // Endpoint: GET https://api.ultramsg.com/instance[Instance_id]/status?token=[token]
     // A ULTRAMSG_API_URL já deve conter o ID da instância no final.
-    const qrCodeApiUrl = `${ULTRAMSG_API_URL}qrcode?token=${ULTRAMSG_TOKEN}`; 
-    console.log(`Chamando UltraMsg API para QR Code: ${qrCodeApiUrl}`);
+    const statusApiUrl = `${ULTRAMSG_API_URL}status?token=${ULTRAMSG_TOKEN}`; 
+    console.log(`Chamando UltraMsg API para Status: ${statusApiUrl}`);
 
     try {
-        const response = await fetch(qrCodeApiUrl, { method: 'GET' });
+        const response = await fetch(statusApiUrl, { method: 'GET' });
         const data = await response.json(); // Tenta parsear a resposta como JSON
 
         // DEBUG: Loga a resposta completa do UltraMsg para ver a estrutura exata
         console.log('Resposta COMPLETA do UltraMsg (depois de JSON.parse):', JSON.stringify(data, null, 2));
 
-        // MUDANÇA FINAL AQUI: Condição mais explícita para verificar a propriedade 'qrcode'
-        if (typeof data === 'object' && data !== null && Object.prototype.hasOwnProperty.call(data, 'qrcode')) {
-            const qrCodeString = data.qrcode; // Pega o valor do QR code
-            
-            // Verifica se o valor é uma string e não está vazia.
-            if (typeof qrCodeString === 'string' && qrCodeString.length > 0) {
-                console.log('QR Code recebido do UltraMsg com sucesso!');
-                res.status(200).json({ success: true, qr: qrCodeString }); 
-            } else {
-                console.error('Propriedade qrcode encontrada, mas valor não é string válida/não vazia:', JSON.stringify(data, null, 2));
-                res.status(response.status || 500).json({
-                    success: false,
-                    message: 'QR Code recebido, mas formato inválido. Resposta: ' + JSON.stringify(data)
-                });
+        // MUDANÇA FINAL: Lógica para tratar a resposta do STATUS
+        if (typeof data === 'object' && data !== null && typeof data.status === 'string') {
+            switch (data.status) {
+                case 'authenticated':
+                    console.log('Instância UltraMsg já está AUTENTICADA. Nenhum QR code necessário.');
+                    res.status(200).json({ success: true, message: 'Instância WhatsApp já conectada.', status: 'authenticated' });
+                    break;
+                case 'not_authorized':
+                case 'qr': // Quando o status é 'qr', o QR Code deve estar na resposta
+                    if (typeof data.qrcode === 'string' && data.qrcode.length > 0) {
+                        console.log('QR Code recebido do UltraMsg (instância NÃO AUTORIZADA)!');
+                        res.status(200).json({ success: true, qr: data.qrcode, status: data.status });
+                    } else {
+                        // Status 'not_authorized'/'qr' mas sem o QR Code (erro inesperado)
+                        console.error('Status ' + data.status + ' mas QR Code ausente na resposta:', JSON.stringify(data, null, 2));
+                        res.status(response.status || 500).json({ 
+                            success: false, 
+                            message: 'Instância não autorizada, mas QR Code ausente ou inválido.',
+                            status: data.status 
+                        });
+                    }
+                    break;
+                case 'loading':
+                case 'initialize':
+                case 'standby':
+                    console.log('Instância UltraMsg em estado de carregamento/inicialização. Aguardando...');
+                    res.status(200).json({ success: false, message: 'Instância em inicialização. Tente novamente em breve.', status: data.status });
+                    break;
+                default:
+                    console.error('Status desconhecido da instância UltraMsg:', JSON.stringify(data, null, 2));
+                    res.status(response.status || 500).json({ 
+                        success: false, 
+                        message: 'Status desconhecido da instância UltraMsg.',
+                        status: data.status
+                    });
             }
         } else {
-            console.error('Erro ou propriedade qrcode ausente na resposta do UltraMsg. Resposta: ', JSON.stringify(data, null, 2));
-            res.status(response.status || 500).json({
-                success: false,
-                message: data.error || 'Erro desconhecido ou QR Code ausente do UltraMsg.'
+            console.error('Erro ou estrutura de resposta inesperada do UltraMsg. Resposta: ', JSON.stringify(data, null, 2));
+            res.status(response.status || 500).json({ 
+                success: false, 
+                message: data.error || 'Erro na resposta da API de status do UltraMsg. Resposta: ' + JSON.stringify(data)
             });
         }
 
