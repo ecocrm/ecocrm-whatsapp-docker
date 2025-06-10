@@ -1,13 +1,13 @@
 import express from 'express';
 import cors from 'cors';
-import fetch from 'node-fetch'; // Adicione esta importação para fazer requisições HTTP
+import fetch from 'node-fetch';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middlewares
 app.use(cors({
-    origin: '*' // Permite pedidos de qualquer origem
+    origin: '*'
 }));
 app.use(express.json());
 
@@ -20,12 +20,10 @@ app.get('/', (req, res) => {
 app.post('/start-session', async (req, res) => {
     console.log('Recebido pedido para iniciar a sessão com UltraMsg...');
 
-    // Pega as variáveis de ambiente que configuramos no Render
-    const ULTRAMSG_API_URL = process.env.ULTRAMSG_API_URL; // Ex: https://api.ultramsg.com/instance124883/
+    const ULTRAMSG_API_URL = process.env.ULTRAMSG_API_URL;
     const ULTRAMSG_INSTANCE_ID = process.env.ULTRAMSG_INSTANCE_ID;
     const ULTRAMSG_TOKEN = process.env.ULTRAMSG_TOKEN;
 
-    // Verifica se as variáveis estão configuradas
     if (!ULTRAMSG_API_URL || !ULTRAMSG_INSTANCE_ID || !ULTRAMSG_TOKEN) {
         console.error('Erro: Variáveis de ambiente do UltraMsg não configuradas!');
         return res.status(500).json({ 
@@ -34,25 +32,25 @@ app.post('/start-session', async (req, res) => {
         });
     }
 
-    // CONSTRÓI A URL CORRETAMENTE AGORA
-    // A API_URL já tem o ID da instância no final, então basta adicionar o '/instance/qrCode?token='
     const qrCodeApiUrl = `${ULTRAMSG_API_URL}instance/qrCode?token=${ULTRAMSG_TOKEN}`;
     console.log(`Chamando UltraMsg API para QR Code: ${qrCodeApiUrl}`);
 
     try {
-        // Faz a requisição GET para a API do UltraMsg
         const response = await fetch(qrCodeApiUrl, { method: 'GET' });
-        const data = await response.json();
+        const data = await response.json(); // Tenta parsear a resposta como JSON
 
-        // Verifica a resposta da API do UltraMsg
-        if (response.ok && data.qrcode) { // UltraMsg retorna o QR code na chave 'qrcode'
+        // MUDANÇA AQUI:
+        // Se a resposta contém a chave 'qrcode', consideramos sucesso e retornamos.
+        // Se não, é um erro.
+        if (data && data.qrcode) { 
             console.log('QR Code recebido do UltraMsg com sucesso!');
-            res.status(200).json({ success: true, qr: data.qrcode }); // Retorna a string do QR code
+            // UltraMsg retorna o QR code na chave 'qrcode'.
+            res.status(200).json({ success: true, qr: data.qrcode }); 
         } else {
-            console.error('Erro ao obter QR Code do UltraMsg:', data);
-            res.status(response.status).json({ 
+            console.error('Erro ou QR Code não encontrado na resposta do UltraMsg:', data);
+            res.status(response.status || 500).json({ 
                 success: false, 
-                message: data.error || 'Erro desconhecido ao obter QR Code do UltraMsg.' 
+                message: data.error || 'Erro desconhecido ao obter QR Code do UltraMsg. Resposta: ' + JSON.stringify(data)
             });
         }
 
