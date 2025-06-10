@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import fetch from 'node-fetch';
+import fetch from 'node-fetch'; // Adicione esta importação para fazer requisições HTTP
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -39,23 +39,25 @@ app.post('/start-session', async (req, res) => {
         const response = await fetch(qrCodeApiUrl, { method: 'GET' });
         const data = await response.json(); // Tenta parsear a resposta como JSON
 
-        // MUDANÇA AQUI:
-        // Se a resposta contém a chave 'qrcode', consideramos sucesso e retornamos.
-        // Se não, é um erro.
-        if (data && data.qrcode) { 
+        // DEBUG: Loga a resposta completa do UltraMsg para ver a estrutura exata
+        console.log('Resposta COMPLETA do UltraMsg (depois de JSON.parse):', JSON.stringify(data, null, 2));
+
+        // MUDANÇA AQUI: Condição mais robusta para verificar o QR Code
+        // Verifica se 'data' é um objeto e se tem uma propriedade 'qrcode' que não é vazia.
+        if (typeof data === 'object' && data !== null && typeof data.qrcode === 'string' && data.qrcode.length > 0) {
             console.log('QR Code recebido do UltraMsg com sucesso!');
-            // UltraMsg retorna o QR code na chave 'qrcode'.
             res.status(200).json({ success: true, qr: data.qrcode }); 
         } else {
-            console.error('Erro ou QR Code não encontrado na resposta do UltraMsg:', data);
+            // Este bloco agora só será acionado se realmente não houver um QR Code válido.
+            console.error('Erro ou QR Code válido não encontrado na resposta do UltraMsg. Resposta: ', JSON.stringify(data, null, 2));
             res.status(response.status || 500).json({ 
                 success: false, 
-                message: data.error || 'Erro desconhecido ao obter QR Code do UltraMsg. Resposta: ' + JSON.stringify(data)
+                message: data.error || 'Erro desconhecido ou QR Code inválido/ausente do UltraMsg.' 
             });
         }
 
     } catch (error) {
-        console.error('Erro na comunicação com a API do UltraMsg:', error);
+        console.error('Erro na comunicação com a API do UltraMsg (verifique a URL ou conexão):', error);
         res.status(500).json({ success: false, message: `Erro interno do servidor ao conectar com UltraMsg: ${error.message}` });
     }
 });
