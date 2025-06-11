@@ -15,13 +15,8 @@ app.get('/', (req, res) => {
   res.status(200).json({ message: 'Servidor WhatsApp EcoCRM está a funcionar!' });
 });
 
-app.get('/teste-log', (req, res) => {
-  console.log('--- ROTA DE TESTE DE LOG ACESSADA COM SUCESSO ---');
-  res.status(200).send('Log de teste registrado!');
-});
-
 app.post('/start-session', async (req, res) => {
-  console.log('>>> REQUISIÇÃO RECEBIDA PELO BACKEND NO VPS <<<');
+  console.log('>>> /start-session RECEBIDA <<<');
 
   let sessionQrCode = null;
   let qrAttempts = 0;
@@ -30,27 +25,23 @@ app.post('/start-session', async (req, res) => {
   const sessionDir = path.join('/root/ecocrm-whatsapp-docker', 'tokens', 'ecocrm-session-vps');
 
   try {
-    console.log(`Tentando limpar a pasta da sessão: ${sessionDir}`);
+    console.log(`🧹 Limpando pasta da sessão: ${sessionDir}`);
     await fs.rm(sessionDir, { recursive: true, force: true }).catch(err => {
-      if (err.code !== 'ENOENT') console.error('Erro ao limpar pasta da sessão:', err);
+      if (err.code !== 'ENOENT') console.error('Erro ao limpar sessão:', err);
     });
 
-    console.log('Pasta da sessão limpa ou não existente. Prosseguindo.');
-
     const executablePath = await chromium.executablePath;
+    console.log('🔍 Chromium path:', executablePath);
     if (!executablePath) {
-      console.error('Chromium não encontrado ou caminho inválido!');
-      return res.status(500).json({ success: false, message: 'Não foi possível encontrar o navegador Chromium.' });
+      return res.status(500).json({ success: false, message: 'Chromium não encontrado.' });
     }
-
-    console.log(`Usando Chromium em: ${executablePath}`);
 
     const client = await create({
       session: 'ecocrm-session-vps',
       headless: 'new',
       autoClose: false,
       catchQR: (base64Qr) => {
-        console.log('QR Code recebido pelo WPPConnect!');
+        console.log('✅ QR Code capturado com sucesso');
         sessionQrCode = `data:image/png;base64,${base64Qr}`;
       },
       browserArgs: chromium.args,
@@ -61,33 +52,32 @@ app.post('/start-session', async (req, res) => {
       },
     });
 
-    console.log('Cliente WPPConnect criado. Aguardando QR Code...');
+    console.log('🟢 Cliente WPPConnect criado. Verificando conexão...');
 
     while (!sessionQrCode && qrAttempts < MAX_QR_ATTEMPTS) {
-      const sessionState = await client.getConnectionState();
-      if (['CONNECTED', 'AUTHENTICATED', 'NORMAL'].includes(sessionState)) {
-        console.log('Instância já conectada/autenticada.');
-        res.status(200).json({ success: true, message: 'Instância WhatsApp já conectada.', status: sessionState });
-        return;
+      const state = await client.getConnectionState();
+      console.log(`⌛ Estado da sessão: ${state}`);
+      if (['CONNECTED', 'AUTHENTICATED', 'NORMAL'].includes(state)) {
+        return res.status(200).json({ success: true, message: 'Instância já conectada.', status: state });
       }
       await new Promise(resolve => setTimeout(resolve, 500));
       qrAttempts++;
     }
 
     if (sessionQrCode) {
-      console.log('QR Code pronto. Enviando para o cliente...');
+      console.log('📤 Enviando QR Code para o frontend...');
       res.status(200).json({ success: true, qr: sessionQrCode });
     } else {
-      console.error('Timeout: QR Code não gerado a tempo.');
-      res.status(500).json({ success: false, message: 'Timeout ao gerar QR Code ou instância não conectada.' });
+      console.warn('⏱️ Timeout: QR Code não gerado.');
+      res.status(500).json({ success: false, message: 'Timeout aguardando QR Code.' });
     }
 
   } catch (error) {
-    console.error('Erro geral na rota /start-session:', error);
+    console.error('❌ ERRO GERAL:', error);
     await fs.rm(sessionDir, { recursive: true, force: true }).catch(err => {
-      if (err.code !== 'ENOENT') console.error('Erro ao limpar pasta da sessão após falha:', err);
+      if (err.code !== 'ENOENT') console.error('Erro limpando após falha:', err);
     });
-    res.status(500).json({ success: false, message: `Erro interno: ${error.message}` });
+    res.status(500).json({ success: false, message: `Erro: ${error.message}` });
   }
 });
 
